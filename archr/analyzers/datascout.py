@@ -51,9 +51,13 @@ class DataScoutAnalyzer(Analyzer):
         if self.target.target_arch == 'x86_64':
             return (
                 self._encode_bytes(filename) +
-                "mov rdi, rsp; xor rsi, rsi; xor rdx, rdx; mov rax, 2; syscall;" + # n = open(path, O_RDONLY, 0)
-                "mov rdi, 1; mov rsi, rax; mov rdx, 0; mov r10, 0x1000000; mov rax, 40; syscall;" + # sendfile(1, n, 0, 0x1000000)
-                "mov rax, 0x28; syscall;" * 5 # sendfile(1, n, 0, 0x1000000)
+                "mov rdi, rsp; xor rsi, rsi; xor rdx,rdx; mov rax,2; syscall;" + # n = open(path, O_RDONLY, 0)
+                "mov r12, rax; sub rsp, 0x1000;" +
+                "loop_head:" +
+                "xor rax,rax; MOV rdi, r12; MOV rsi, rsp; MOV rdx, 0x1000; syscall;" + # read from file
+                "MOV r13, rax; MOV rax, 0x1; MOV rdi, 0x1; MOV rsi, rsp; MOV rdx, r13; syscall;" + # write from file
+                "test r13,13;" # if we didnt read all of it
+                "jnz loop_head;"
             )
         elif self.target.target_arch == 'i386':
             return (
